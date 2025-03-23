@@ -168,15 +168,7 @@ if query:
         summary = unified_summary_fusion(intro or "", smiles or "", all_summaries)
         st.markdown(summary)
 
-# --- GPT STYLE Q&A ---
-st.markdown("---")
-st.subheader("💬 Ask DyeMind Anything")
-user_question = st.text_area("Ask a question about fluorophores, structure, use cases, or scientific insights:")
-if st.button("Ask AI"):
-    with st.spinner("🤖 Thinking..."):
-        ai_response = ask_dyemind_ai(user_question)
-        st.markdown(ai_response)
-
 # Footer
 st.markdown("---")
 st.caption("DyeMind by Dr. Joy Karmakar · Powered by PubMed, PubChem, Wikipedia, and Hugging Face APIs")
+
