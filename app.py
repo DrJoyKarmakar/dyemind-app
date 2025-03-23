@@ -1,4 +1,3 @@
-
 import streamlit as st
 import requests
 from xml.etree import ElementTree as ET
@@ -6,6 +5,24 @@ from xml.etree import ElementTree as ET
 # --- PAGE CONFIG ---
 st.set_page_config(page_title="DyeMind - Fluorophore Explorer", layout="wide")
 st.title("🧠 DyeMind – Unified Fluorophore Search Panel")
+
+st.markdown("""
+**Created by Dr. Joy Karmakar (March 2025)**  
+DyeMind is the **first AI-powered unified search platform** for fluorescent molecules. It brings together real-time data from PubChem, PubMed, CrossRef, Wikipedia, and Hugging Face AI models.
+
+🔬 Instantly retrieve chemical structures and SMILES  
+📚 Access and summarize the latest literature  
+🧠 Ask natural-language questions about fluorophores  
+🌐 Learn through integrated Wikipedia context
+
+DyeMind is a novel tool built at the intersection of chemistry, artificial intelligence, and open science — a step toward democratizing fluorescence knowledge for the world.
+""")
+
+st.markdown("""
+**Created by Dr. Joy Karmakar (March 2025)**  
+DyeMind is the **first AI-powered unified search platform** for fluorescent molecules, combining PubChem, PubMed, CrossRef, Wikipedia, and Hugging Face AI into one tool.  
+It offers a **novel integration of chemical structure, literature summarization, and intelligent Q&A**, designed to accelerate discovery and understanding of fluorophores in scientific research.
+""")
 
 st.markdown("Search any fluorophore name, DOI, or topic to explore structure, summaries, and literature.")
 
@@ -35,18 +52,18 @@ def summarize_text(text):
         return "Summary unavailable (AI offline or token missing)."
     return "Summary unavailable."
 
-# --- AI QUESTION ANSWERING ---
+# --- GPT-STYLE Q&A VIA HUGGING FACE ---
 def ask_dyemind_ai(question):
+    api_url = "https://api-inference.huggingface.co/models/google/flan-t5-xl"
+    headers = {"Authorization": f"Bearer {st.secrets['huggingface_token']}"}
+    payload = {"inputs": question}
     try:
-        API_URL = "https://api-inference.huggingface.co/models/google/flan-t5-large"
-        headers = {"Authorization": f"Bearer {st.secrets['huggingface_token']}"}
-        payload = {"inputs": question}
-        response = requests.post(API_URL, headers=headers, json=payload)
+        response = requests.post(api_url, headers=headers, json=payload)
         if response.status_code == 200:
-            return response.json()[0]["generated_text"]
+            return response.json()[0]['generated_text']
     except:
-        return "❌ Unable to get an answer at the moment."
-    return "❌ Something went wrong."
+        return "❌ Unable to generate a response. Please try again later."
+    return "❌ AI not responding."
 
 # --- PUBCHEM STRUCTURE ---
 def get_pubchem_structure(name):
@@ -134,15 +151,34 @@ if query:
         else:
             st.warning("No PubMed articles found or failed to fetch.")
 
-# --- Q&A Assistant ---
+# --- GPT STYLE Q&A ---
 st.markdown("---")
-st.subheader("💬 Ask DyeMind (AI Assistant)")
-user_question = st.text_area("Ask anything about fluorophores or imaging applications:")
-if st.button("Ask"):
+st.subheader("💬 Ask DyeMind Anything")
+user_question = st.text_area("Ask a question about fluorophores, structure, use cases, or scientific insights:")
+if st.button("Ask AI"):
     with st.spinner("🤖 Thinking..."):
-        response = ask_dyemind_ai(user_question)
-        st.markdown(response)
+        ai_response = ask_dyemind_ai(user_question)
+        st.markdown(ai_response)
 
 # Footer
 st.markdown("---")
 st.caption("DyeMind by Dr. Joy Karmakar · Powered by PubMed, PubChem, Wikipedia, and Hugging Face APIs")
+
+st.markdown("""
+---
+
+### 📘 About This App
+**🧠 DyeMind – AI-Powered Fluorophore Explorer**
+
+**Created by Dr. Joy Karmakar (March 2025)**  
+DyeMind is the *first AI-native platform* dedicated to fluorophores. It unifies chemical structures, literature discovery, intelligent summarization, and natural language Q&A — powered by real-time data and Hugging Face AI.
+
+- 🔬 PubChem integration for molecular structure and SMILES
+- 📚 PubMed + CrossRef for recent fluorophore literature
+- 🧠 AI summaries from state-of-the-art NLP models
+- 💬 GPT-style Q&A built on Hugging Face
+- 🌐 Wikipedia context for quick understanding
+
+This app pioneers a new direction in chemical research tools — combining science and AI to accelerate fluorescence discovery.
+""")
+
