@@ -29,8 +29,8 @@ def get_pubchem_structure(compound_name):
         cid_url = f"https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/name/{compound_name}/cids/TXT"
         cid_resp = requests.get(cid_url)
         if cid_resp.status_code == 200:
-            cid = cid_resp.text.strip().split("
-")[0]
+            cid = cid_resp.text.strip().split("\n")[0]
+
             img_url = f"https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/cid/{cid}/PNG"
             smiles_url = f"https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/cid/{cid}/property/CanonicalSMILES/JSON"
             smiles_resp = requests.get(smiles_url)
