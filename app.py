@@ -2,6 +2,7 @@
 import streamlit as st
 import requests
 import pandas as pd
+from xml.etree import ElementTree as ET
 
 # --- PAGE CONFIGURATION ---
 st.set_page_config(page_title="DyeMind - AI Fluorophore Explorer", layout="wide")
@@ -11,7 +12,20 @@ st.title("🧠 DyeMind – Unified Fluorophore Search Panel")
 st.markdown("Search any fluorophore name, DOI, or topic to explore literature, structure, and summaries.")
 query = st.text_input("🔍 Enter fluorophore, DOI, or topic")
 
+# --- FUNCTION: Wikipedia Introduction ---
+def get_wikipedia_intro(query):
+    url = f"https://en.wikipedia.org/api/rest_v1/page/summary/{query.replace(' ', '_')}"
+    try:
+        response = requests.get(url)
+        if response.status_code == 200:
+            data = response.json()
+            return data.get("extract", ""), data.get("content_urls", {}).get("desktop", {}).get("page", "")
+    except:
+        pass
+    return None, None
+
 # --- FUNCTION: Summarize Abstract via Hugging Face ---
+@st.cache_data
 def summarize_text(text):
     API_URL = "https://api-inference.huggingface.co/models/facebook/bart-large-cnn"
     headers = {"Authorization": f"Bearer {st.secrets['huggingface_token']}"}
@@ -30,7 +44,6 @@ def get_pubchem_structure(compound_name):
         cid_resp = requests.get(cid_url)
         if cid_resp.status_code == 200:
             cid = cid_resp.text.strip().split("\n")[0]
-
             img_url = f"https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/cid/{cid}/PNG"
             smiles_url = f"https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/cid/{cid}/property/CanonicalSMILES/JSON"
             smiles_resp = requests.get(smiles_url)
@@ -43,7 +56,7 @@ def get_pubchem_structure(compound_name):
 # --- FUNCTION: Search PubMed for Articles ---
 def search_pubmed(query, max_results=3):
     try:
-        esearch = f"https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=pubmed&retmode=json&term={query}&retmax={max_results}"
+        esearch = f"https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=pubmed&retmode=json&term={query}+AND+hasabstract[text]&sort=relevance&retmax={max_results}"
         esearch_resp = requests.get(esearch).json()
         ids = esearch_resp['esearchresult']['idlist']
         efetch = f"https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=pubmed&id={','.join(ids)}&retmode=xml"
@@ -53,8 +66,6 @@ def search_pubmed(query, max_results=3):
         return None
 
 # --- FUNCTION: Parse PubMed XML ---
-from xml.etree import ElementTree as ET
-
 def parse_pubmed_xml(xml_data):
     articles = []
     root = ET.fromstring(xml_data)
@@ -77,6 +88,12 @@ def parse_pubmed_xml(xml_data):
 # --- DISPLAY RESULTS ---
 if query:
     with st.spinner("🔬 Fetching data and generating insights..."):
+
+        # Wikipedia Introduction
+        intro, wiki_link = get_wikipedia_intro(query)
+        if intro:
+            st.subheader("🧬 Introduction from Wikipedia")
+            st.markdown(f"{intro} [Read more]({wiki_link})")
 
         # Show PubChem Structure (if applicable)
         img_url, cid, smiles = get_pubchem_structure(query)
@@ -104,4 +121,4 @@ if query:
 
 # Footer
 st.markdown("---")
-st.caption("DyeMind by Dr. Joy Karmakar · All data retrieved from PubMed, PubChem, CrossRef, and Hugging Face APIs")
+st.caption("DyeMind by Dr. Joy Karmakar · All data retrieved from PubMed, PubChem, CrossRef, Wikipedia, and Hugging Face APIs")
