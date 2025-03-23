@@ -1,12 +1,13 @@
 import streamlit as st
+import requests
 import pandas as pd
 
-# Page setup
+# Existing Bimane data display (keep this part)
 st.set_page_config(page_title="DyeMind - Bimane Explorer", layout="wide")
 st.title("🧠 DyeMind – Bimane Fluorophore Explorer")
 st.markdown("Explore and compare key properties of known Bimane fluorophores.")
 
-# Sample data
+# Fluorophore data
 data = {
     "Name": [
         "Monobromobimane (mBBr)",
@@ -35,11 +36,30 @@ data = {
     ]
 }
 
-# Create dataframe
 df = pd.DataFrame(data)
-
-# Show the table
 st.dataframe(df, use_container_width=True)
 
-# Optional footer
-st.markdown("📌 *More features coming soon — structure search, AI summaries, and compound visualization.*")
+# -----------------------------------------------
+# ✅ AI Summarizer Section (Hugging Face)
+# -----------------------------------------------
+st.markdown("---")
+st.subheader("🧠 AI-Powered Paper Summarizer (Free with Hugging Face)")
+
+API_URL = "https://api-inference.huggingface.co/models/facebook/bart-large-cnn"
+headers = {"Authorization": f"Bearer {st.secrets['huggingface_token']}"}
+
+def summarize_text(text):
+    response = requests.post(API_URL, headers=headers, json={"inputs": text})
+    if response.status_code == 200:
+        return response.json()[0]["summary_text"]
+    else:
+        return "⚠️ Error from AI model. Please check your token or try again."
+
+# Input
+user_input = st.text_area("📋 Paste the abstract or paper text here:")
+
+if st.button("Summarize"):
+    with st.spinner("Summarizing..."):
+        summary = summarize_text(user_input)
+        st.success("📘 Summary:")
+        st.write(summary)
