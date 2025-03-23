@@ -1,4 +1,3 @@
-
 import streamlit as st
 import requests
 from xml.etree import ElementTree as ET
@@ -44,7 +43,31 @@ def summarize_text(text):
         return "Summary unavailable (AI offline or token missing)."
     return "Summary unavailable."
 
-# --- GPT-STYLE Q&A VIA HUGGING FACE ---
+# --- UNIFIED SUMMARY FUSION ---
+def unified_summary_fusion(wiki, smiles, pubmed_summaries):
+    joined = f"""
+Fluorophore Background:
+{wiki}
+
+Structure (SMILES):
+{smiles}
+
+Recent Literature Summaries:
+{pubmed_summaries}
+
+Generate a unified expert-level summary for a researcher interested in this fluorophore. Include structure, key properties, and applications if present.
+"""
+    try:
+        API_URL = "https://api-inference.huggingface.co/models/google/flan-t5-xl"
+        headers = {"Authorization": f"Bearer {st.secrets['huggingface_token']}"}
+        response = requests.post(API_URL, headers=headers, json={"inputs": joined})
+        if response.status_code == 200:
+            return response.json()[0]['generated_text']
+    except:
+        return "⚠️ Unified summary generation failed."
+    return "⚠️ No result."
+
+# --- GPT-STYLE Q&A ---
 def ask_dyemind_ai(question):
     api_url = "https://api-inference.huggingface.co/models/google/flan-t5-xl"
     headers = {"Authorization": f"Bearer {st.secrets['huggingface_token']}"}
@@ -112,26 +135,25 @@ def parse_pubmed_xml(xml_data):
 # --- DISPLAY RESULTS ---
 if query:
     with st.spinner("🔬 Fetching insights..."):
-
-        # Wikipedia intro
         intro, link = get_wikipedia_intro(query)
+        img_url, cid, smiles = get_pubchem_structure(query)
+        xml = search_pubmed(query)
+
         if intro:
-            st.subheader("🧬 Introduction from Wikipedia")
+            st.subheader("🧬 Wikipedia Introduction")
             st.markdown(f"{intro} [Read more]({link})")
 
-        # PubChem structure
-        img_url, cid, smiles = get_pubchem_structure(query)
         if img_url:
             st.subheader("🧪 Chemical Structure")
             st.image(img_url, caption=f"PubChem CID: {cid}")
             st.code(smiles, language="none")
 
-        # PubMed articles
-        xml = search_pubmed(query)
+        all_summaries = ""
         if xml:
             articles = parse_pubmed_xml(xml)
             st.subheader("📚 Literature Insights")
             for i, art in enumerate(articles):
+                all_summaries += f"{art['summary']}\n"
                 with st.expander(f"{i+1}. {art['title']}"):
                     if art['doi']:
                         st.markdown(f"**DOI:** [{art['doi']}](https://doi.org/{art['doi']})")
@@ -140,8 +162,11 @@ if query:
                     st.markdown(f"**Summary:** _{art['summary']}_")
                     st.markdown("---")
                     st.markdown(art['abstract'])
-        else:
-            st.warning("No PubMed articles found or failed to fetch.")
+
+        # Unified Summary
+        st.subheader("🧠 Unified AI Summary")
+        summary = unified_summary_fusion(intro or "", smiles or "", all_summaries)
+        st.markdown(summary)
 
 # --- GPT STYLE Q&A ---
 st.markdown("---")
