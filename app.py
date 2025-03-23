@@ -6,23 +6,9 @@ from xml.etree import ElementTree as ET
 st.set_page_config(page_title="DyeMind - Fluorophore Explorer", layout="wide")
 st.title("🧠 DyeMind – Unified Fluorophore Search Panel")
 
-st.markdown("""
-**Created by Dr. Joy Karmakar (March 2025)**  
-DyeMind is the **first AI-powered unified search platform** for fluorescent molecules. It brings together real-time data from PubChem, PubMed, CrossRef, Wikipedia, and Hugging Face AI models.
 
-🔬 Instantly retrieve chemical structures and SMILES  
-📚 Access and summarize the latest literature  
-🧠 Ask natural-language questions about fluorophores  
-🌐 Learn through integrated Wikipedia context
 
-DyeMind is a novel tool built at the intersection of chemistry, artificial intelligence, and open science — a step toward democratizing fluorescence knowledge for the world.
-""")
 
-st.markdown("""
-**Created by Dr. Joy Karmakar (March 2025)**  
-DyeMind is the **first AI-powered unified search platform** for fluorescent molecules, combining PubChem, PubMed, CrossRef, Wikipedia, and Hugging Face AI into one tool.  
-It offers a **novel integration of chemical structure, literature summarization, and intelligent Q&A**, designed to accelerate discovery and understanding of fluorophores in scientific research.
-""")
 
 st.markdown("Search any fluorophore name, DOI, or topic to explore structure, summaries, and literature.")
 
