@@ -1,65 +1,107 @@
+
 import streamlit as st
 import requests
 import pandas as pd
 
-# Existing Bimane data display (keep this part)
-st.set_page_config(page_title="DyeMind - Bimane Explorer", layout="wide")
-st.title("🧠 DyeMind – Bimane Fluorophore Explorer")
-st.markdown("Explore and compare key properties of known Bimane fluorophores.")
+# --- PAGE CONFIGURATION ---
+st.set_page_config(page_title="DyeMind - AI Fluorophore Explorer", layout="wide")
+st.title("🧠 DyeMind – Unified Fluorophore Search Panel")
 
-# Fluorophore data
-data = {
-    "Name": [
-        "Monobromobimane (mBBr)",
-        "Dibromobimane (dBBr)",
-        "Azido-Bimane",
-        "Amino-Bimane",
-        "Glutathione-Bimane Adduct"
-    ],
-    "Excitation λ (nm)": [394, 396, 405, 410, 395],
-    "Emission λ (nm)": [480, 482, 510, 520, 478],
-    "Stokes Shift (nm)": [86, 86, 105, 110, 83],
-    "Quantum Yield": [0.96, 0.88, 0.71, 0.69, 0.85],
-    "Application": [
-        "Thiol detection in proteins",
-        "Environmental ROS sensing",
-        "Click chemistry labeling",
-        "Bio-conjugation and probes",
-        "Detection of GSH in cells"
-    ],
-    "DOI / Source": [
-        "10.1021/bi00219a008",
-        "10.1039/b204601n",
-        "10.1002/chem.202000322",
-        "10.1021/jacs.9b13294",
-        "10.1016/j.ab.2004.09.007"
-    ]
-}
+# --- SEARCH PANEL ---
+st.markdown("Search any fluorophore name, DOI, or topic to explore literature, structure, and summaries.")
+query = st.text_input("🔍 Enter fluorophore, DOI, or topic")
 
-df = pd.DataFrame(data)
-st.dataframe(df, use_container_width=True)
-
-# -----------------------------------------------
-# ✅ AI Summarizer Section (Hugging Face)
-# -----------------------------------------------
-st.markdown("---")
-st.subheader("🧠 AI-Powered Paper Summarizer (Free with Hugging Face)")
-
-API_URL = "https://api-inference.huggingface.co/models/facebook/bart-large-cnn"
-headers = {"Authorization": f"Bearer {st.secrets['huggingface_token']}"}
-
+# --- FUNCTION: Summarize Abstract via Hugging Face ---
 def summarize_text(text):
-    response = requests.post(API_URL, headers=headers, json={"inputs": text})
-    if response.status_code == 200:
-        return response.json()[0]["summary_text"]
-    else:
-        return "⚠️ Error from AI model. Please check your token or try again."
+    API_URL = "https://api-inference.huggingface.co/models/facebook/bart-large-cnn"
+    headers = {"Authorization": f"Bearer {st.secrets['huggingface_token']}"}
+    try:
+        response = requests.post(API_URL, headers=headers, json={"inputs": text})
+        if response.status_code == 200:
+            return response.json()[0]['summary_text']
+    except:
+        return "Summary unavailable."
+    return "Summary unavailable."
 
-# Input
-user_input = st.text_area("📋 Paste the abstract or paper text here:")
+# --- FUNCTION: Get PubChem Structure ---
+def get_pubchem_structure(compound_name):
+    try:
+        cid_url = f"https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/name/{compound_name}/cids/TXT"
+        cid_resp = requests.get(cid_url)
+        if cid_resp.status_code == 200:
+            cid = cid_resp.text.strip().split("
+")[0]
+            img_url = f"https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/cid/{cid}/PNG"
+            smiles_url = f"https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/cid/{cid}/property/CanonicalSMILES/JSON"
+            smiles_resp = requests.get(smiles_url)
+            smiles = smiles_resp.json()['PropertyTable']['Properties'][0]['CanonicalSMILES']
+            return img_url, cid, smiles
+    except:
+        pass
+    return None, None, None
 
-if st.button("Summarize"):
-    with st.spinner("Summarizing..."):
-        summary = summarize_text(user_input)
-        st.success("📘 Summary:")
-        st.write(summary)
+# --- FUNCTION: Search PubMed for Articles ---
+def search_pubmed(query, max_results=3):
+    try:
+        esearch = f"https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=pubmed&retmode=json&term={query}&retmax={max_results}"
+        esearch_resp = requests.get(esearch).json()
+        ids = esearch_resp['esearchresult']['idlist']
+        efetch = f"https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=pubmed&id={','.join(ids)}&retmode=xml"
+        fetch_resp = requests.get(efetch)
+        return fetch_resp.text
+    except:
+        return None
+
+# --- FUNCTION: Parse PubMed XML ---
+from xml.etree import ElementTree as ET
+
+def parse_pubmed_xml(xml_data):
+    articles = []
+    root = ET.fromstring(xml_data)
+    for article in root.findall(".//PubmedArticle"):
+        title = article.findtext(".//ArticleTitle")
+        abstract = article.findtext(".//AbstractText") or "No abstract available."
+        journal = article.findtext(".//Journal/Title")
+        authors = [a.findtext(".//LastName") + " " + a.findtext(".//ForeName") for a in article.findall(".//Author") if a.findtext(".//LastName")]
+        doi = article.findtext(".//ArticleId[@IdType='doi']")
+        articles.append({
+            "title": title,
+            "abstract": abstract,
+            "summary": summarize_text(abstract),
+            "journal": journal,
+            "authors": ", ".join(authors[:4]),
+            "doi": doi
+        })
+    return articles
+
+# --- DISPLAY RESULTS ---
+if query:
+    with st.spinner("🔬 Fetching data and generating insights..."):
+
+        # Show PubChem Structure (if applicable)
+        img_url, cid, smiles = get_pubchem_structure(query)
+        if img_url:
+            st.subheader("🧪 Chemical Information")
+            st.image(img_url, caption=f"PubChem CID: {cid}")
+            st.code(smiles, language='none')
+
+        # PubMed Results
+        xml_results = search_pubmed(query)
+        if xml_results:
+            articles = parse_pubmed_xml(xml_results)
+            st.subheader("📚 Literature Insights")
+            for i, art in enumerate(articles):
+                with st.expander(f"{i+1}. {art['title']}"):
+                    if art['doi']:
+                        st.markdown(f"**DOI:** [{art['doi']}](https://doi.org/{art['doi']})")
+                    st.markdown(f"**Journal:** *{art['journal']}*")
+                    st.markdown(f"**Authors:** {art['authors']}")
+                    st.markdown(f"**Summary:** _{art['summary']}_")
+                    st.markdown("---")
+                    st.markdown(art['abstract'])
+        else:
+            st.warning("No articles found or unable to retrieve PubMed data.")
+
+# Footer
+st.markdown("---")
+st.caption("DyeMind by Dr. Joy Karmakar · All data retrieved from PubMed, PubChem, CrossRef, and Hugging Face APIs")
