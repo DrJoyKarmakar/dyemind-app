@@ -35,6 +35,19 @@ def summarize_text(text):
         return "Summary unavailable (AI offline or token missing)."
     return "Summary unavailable."
 
+# --- AI QUESTION ANSWERING ---
+def ask_dyemind_ai(question):
+    try:
+        API_URL = "https://api-inference.huggingface.co/models/google/flan-t5-large"
+        headers = {"Authorization": f"Bearer {st.secrets['huggingface_token']}"}
+        payload = {"inputs": question}
+        response = requests.post(API_URL, headers=headers, json=payload)
+        if response.status_code == 200:
+            return response.json()[0]["generated_text"]
+    except:
+        return "❌ Unable to get an answer at the moment."
+    return "❌ Something went wrong."
+
 # --- PUBCHEM STRUCTURE ---
 def get_pubchem_structure(name):
     try:
@@ -120,6 +133,15 @@ if query:
                     st.markdown(art['abstract'])
         else:
             st.warning("No PubMed articles found or failed to fetch.")
+
+# --- Q&A Assistant ---
+st.markdown("---")
+st.subheader("💬 Ask DyeMind (AI Assistant)")
+user_question = st.text_area("Ask anything about fluorophores or imaging applications:")
+if st.button("Ask"):
+    with st.spinner("🤖 Thinking..."):
+        response = ask_dyemind_ai(user_question)
+        st.markdown(response)
 
 # Footer
 st.markdown("---")
