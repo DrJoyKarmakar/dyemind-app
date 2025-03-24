@@ -1,18 +1,21 @@
 from flask import Flask, request, jsonify
 import openai
 import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 app = Flask(__name__)
 
-# Set your OpenAI API key (or use environment variable)
-openai.api_key = os.getenv("OPENAI_API_KEY", "sk-...")  # Replace or use env variable
+# Load the OpenAI API key securely from environment or .env
+openai.api_key = os.getenv("OPENAI_API_KEY")
 
 @app.route("/api/search", methods=["POST"])
 def search():
     data = request.get_json()
     query = data.get("query", "")
     
-    # Placeholder logic: in a real scenario, you'd integrate PubMed, PubChem, CrossRef here
+    # Placeholder for real PubMed/PubChem/CrossRef integration
     dummy_result = [{
         "title": "Example Fluorophore Study on Bimanes",
         "authors": "Doe J, Smith A",
@@ -30,8 +33,7 @@ def summarize():
             model="gpt-4",
             messages=[
                 {"role": "system", "content": "You are a helpful scientific research assistant."},
-                {"role": "user", "content": f"Summarize the following text:
-{text}"}
+                {"role": "user", "content": f"""Summarize the following text:\n{text}"""}
             ]
         )
         summary = response['choices'][0]['message']['content']
