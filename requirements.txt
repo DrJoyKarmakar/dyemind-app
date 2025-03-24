@@ -1,3 +1,2 @@
 streamlit
-openai
-requests
+openai>=1.0.0
