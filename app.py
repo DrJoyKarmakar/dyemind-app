@@ -78,9 +78,9 @@ if st.button("Search") and query:
 
     st.subheader("📄 References")
     for p in papers:
-        st.markdown(f"**{p['title']}**  
+        st.markdown(f"""**{p['title']}**  
 *pby {p['authors']}*  
-[DOI: {p['doi']}](https://doi.org/{p['doi']})")
+[DOI: {p['doi']}](https://doi.org/{p['doi']})""")
 
     st.subheader("🧪 Fluorophore Structures")
     for c in compounds:
